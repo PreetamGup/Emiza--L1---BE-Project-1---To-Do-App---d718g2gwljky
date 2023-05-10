@@ -63,6 +63,36 @@ const loginUser =async (req, res) => {
     const password = req.body.password;
 
     //Write your code here.
+    try {
+        const user = await Users.findOne({ email: email });
+        if (!user) {
+          return res.status(404).json({
+            message: 'User with this E-mail does not exist !!', 
+            status: 'fail'
+          });
+        }
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+          return res.status(403).json({
+            message: 'Invalid Password, try again !!', 
+            status: 'fail'
+          });
+        }
+        const token = jwt.sign({ id: user._id }, JWT_SECRET, {
+          expiresIn: "1h",
+        });
+
+     
+        res.status(200).json({
+            status: 'success',
+            token
+        });
+      } catch (error) {
+        console.log(error);
+        res.status(500).send({
+          message: `Error in LonginController ${error.message}`,
+        });
+      }
 
 }
 
@@ -119,7 +149,34 @@ const signupUser = async (req, res) => {
 
     const {email, password, name, role} = req.body;
 
+
      //Write your code here.
+     try {
+        const existedUser = await Users.findOne({ email: email });
+        if (existedUser) {
+          return res.status(409).json({
+            message: 'User with given Email allready register' , 
+            status: 'fail'
+          });
+        }
+       
+        const salt = await bcrypt.genSalt(saltRounds);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        req.body.password = hashedPassword;
+        const newUser = new Users(req.body);
+        await newUser.save();
+        res.status(200).json({
+            message: 'User SignedUp successfully', 
+            status: 'success'
+        });
+
+      } catch (error) {
+        console.log(error);
+        res.status(404).send({
+            message: 'Something went wrong' , 
+            status: 'fail'
+        });
+      }
 
 }
 
